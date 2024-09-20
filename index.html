@@ -10,6 +10,7 @@
     }
     div {
       display: flex;
+      position: relative;
     }
     video {
       width: 50vw;
@@ -32,6 +33,14 @@
       margin-top: 10px;
       width: 100%;
     }
+    #fullscreenButton {
+      background-color: rgba(255, 255, 255, 0.2);
+      color: white;
+      padding: 10px;
+      border: none;
+      cursor: pointer;
+      margin-bottom: 10px;
+    }
   </style>
 </head>
 <body>
@@ -42,6 +51,7 @@
 
 <!-- Camera selection popup -->
 <div id="cameraSelectContainer">
+  <button id="fullscreenButton">Go Fullscreen</button>
   <h2>Select a Camera</h2>
   <select id="cameraSelect"></select>
   <button id="confirmCamera">Confirm</button>
@@ -54,6 +64,7 @@
   const cameraSelectContainer = document.getElementById('cameraSelectContainer');
   const cameraSelect = document.getElementById('cameraSelect');
   const confirmCamera = document.getElementById('confirmCamera');
+  const fullscreenButton = document.getElementById('fullscreenButton');
 
   // Function to stop media tracks
   function stopMediaTracks(stream) {
@@ -79,6 +90,9 @@
         });
 
         currentStream = stream;
+
+        // Save the selected camera ID to localStorage
+        localStorage.setItem('selectedCameraId', deviceId);
       })
       .catch(err => {
         console.error("Error accessing webcam: ", err);
@@ -99,8 +113,13 @@
           cameraSelect.appendChild(option);
         });
 
-        // Default to the first camera if available
-        if (videoDevices.length > 0) {
+        // Get the saved camera ID from localStorage
+        const savedCameraId = localStorage.getItem('selectedCameraId');
+
+        // Set the selected camera if it exists in the list, otherwise default to the first camera
+        if (savedCameraId && videoDevices.some(device => device.deviceId === savedCameraId)) {
+          cameraSelect.value = savedCameraId;
+        } else if (videoDevices.length > 0) {
           cameraSelect.value = videoDevices[0].deviceId;
         }
       })
@@ -125,16 +144,55 @@
   });
 
   // Start default webcam streams for both videos when the page loads
-  navigator.mediaDevices.getUserMedia({ video: true })
-    .then(stream => {
-      videoElements.forEach(videoElement => {
-        videoElement.srcObject = stream;
-      });
-      currentStream = stream; // Set current stream
-    })
-    .catch(err => {
-      console.error("Error accessing webcam: ", err);
-    });
+  function initializeWebcam() {
+    const savedCameraId = localStorage.getItem('selectedCameraId');
+    if (savedCameraId) {
+      startWebcam(savedCameraId);
+    } else {
+      navigator.mediaDevices.getUserMedia({ video: true })
+        .then(stream => {
+          videoElements.forEach(videoElement => {
+            videoElement.srcObject = stream;
+          });
+          currentStream = stream; // Set current stream
+        })
+        .catch(err => {
+          console.error("Error accessing webcam: ", err);
+        });
+    }
+  }
+
+  // Initialize webcam on page load
+  initializeWebcam();
+
+  // Toggle Fullscreen Functionality
+  fullscreenButton.addEventListener('click', () => {
+    const videoContainer = document.querySelector('div');
+
+    if (!document.fullscreenElement) {
+      if (videoContainer.requestFullscreen) {
+        videoContainer.requestFullscreen();
+      } else if (videoContainer.mozRequestFullScreen) { // Firefox
+        videoContainer.mozRequestFullScreen();
+      } else if (videoContainer.webkitRequestFullscreen) { // Chrome, Safari and Opera
+        videoContainer.webkitRequestFullscreen();
+      } else if (videoContainer.msRequestFullscreen) { // IE/Edge
+        videoContainer.msRequestFullscreen();
+      }
+      fullscreenButton.textContent = 'Exit Fullscreen';
+    } else {
+      if (document.exitFullscreen) {
+        document.exitFullscreen();
+      } else if (document.mozCancelFullScreen) { // Firefox
+        document.mozCancelFullScreen();
+      } else if (document.webkitExitFullscreen) { // Chrome, Safari and Opera
+        document.webkitExitFullscreen();
+      } else if (document.msExitFullscreen) { // IE/Edge
+        document.msExitFullscreen();
+      }
+      fullscreenButton.textContent = 'Go Fullscreen';
+    }
+  });
 </script>
 </body>
 </html>
