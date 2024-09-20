@@ -1,0 +1,140 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Webcam Feed</title>
+  <style>
+    body {
+      margin: 0;
+    }
+    div {
+      display: flex;
+    }
+    video {
+      width: 50vw;
+      height: 100vh;
+      object-fit: cover;
+      cursor: pointer;
+    }
+    #cameraSelectContainer {
+      position: fixed;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      background-color: rgba(0, 0, 0, 0.8);
+      padding: 20px;
+      border-radius: 10px;
+      display: none;
+      color: white;
+    }
+    select, button {
+      margin-top: 10px;
+      width: 100%;
+    }
+  </style>
+</head>
+<body>
+<div>
+  <video id="webcam" autoplay playsinline></video>
+  <video id="webcam2" autoplay playsinline></video>
+</div>
+
+<!-- Camera selection popup -->
+<div id="cameraSelectContainer">
+  <h2>Select a Camera</h2>
+  <select id="cameraSelect"></select>
+  <button id="confirmCamera">Confirm</button>
+</div>
+
+<script>
+  let currentStream;
+
+  const videoElements = [...document.querySelectorAll('video')];
+  const cameraSelectContainer = document.getElementById('cameraSelectContainer');
+  const cameraSelect = document.getElementById('cameraSelect');
+  const confirmCamera = document.getElementById('confirmCamera');
+
+  // Function to stop media tracks
+  function stopMediaTracks(stream) {
+    if (stream) {
+      stream.getTracks().forEach(track => track.stop());
+    }
+  }
+
+  // Function to start webcam feed with selected camera and update both video elements
+  function startWebcam(deviceId) {
+    const constraints = {
+      video: { deviceId: deviceId ? { exact: deviceId } : undefined }
+    };
+
+    navigator.mediaDevices.getUserMedia(constraints)
+      .then(stream => {
+        // Stop any previous stream
+        stopMediaTracks(currentStream);
+
+        // Set the new stream to both video elements
+        videoElements.forEach(videoElement => {
+          videoElement.srcObject = stream;
+        });
+
+        currentStream = stream;
+      })
+      .catch(err => {
+        console.error("Error accessing webcam: ", err);
+      });
+  }
+
+  // Function to populate the camera options
+  function populateCameraOptions() {
+    navigator.mediaDevices.enumerateDevices()
+      .then(devices => {
+        cameraSelect.innerHTML = ''; // Clear existing options
+        const videoDevices = devices.filter(device => device.kind === 'videoinput');
+
+        videoDevices.forEach((device, index) => {
+          const option = document.createElement('option');
+          option.value = device.deviceId;
+          option.text = device.label || `Camera ${index + 1}`;
+          cameraSelect.appendChild(option);
+        });
+
+        // Default to the first camera if available
+        if (videoDevices.length > 0) {
+          cameraSelect.value = videoDevices[0].deviceId;
+        }
+      })
+      .catch(err => {
+        console.error("Error enumerating devices: ", err);
+      });
+  }
+
+  // Show camera selection popup when any video element is clicked
+  videoElements.forEach(videoElement => {
+    videoElement.addEventListener('click', () => {
+      populateCameraOptions(); // Populate the camera options
+      cameraSelectContainer.style.display = 'block'; // Show the popup
+    });
+  });
+
+  // Handle camera confirmation
+  confirmCamera.addEventListener('click', () => {
+    const selectedCameraId = cameraSelect.value;
+    startWebcam(selectedCameraId); // Start the selected camera on both video elements
+    cameraSelectContainer.style.display = 'none'; // Hide the popup after confirmation
+  });
+
+  // Start default webcam streams for both videos when the page loads
+  navigator.mediaDevices.getUserMedia({ video: true })
+    .then(stream => {
+      videoElements.forEach(videoElement => {
+        videoElement.srcObject = stream;
+      });
+      currentStream = stream; // Set current stream
+    })
+    .catch(err => {
+      console.error("Error accessing webcam: ", err);
+    });
+</script>
+</body>
+</html>
