@@ -28,18 +28,21 @@
       border-radius: 10px;
       display: none;
       color: white;
+      z-index: 100;
+      width: 300px;
+      text-align: center;
     }
     select, button {
       margin-top: 10px;
       width: 100%;
     }
-    #fullscreenButton {
-      background-color: rgba(255, 255, 255, 0.2);
-      color: white;
+    #confirmCamera, #fullscreenButton {
       padding: 10px;
+      margin-top: 15px;
+      background-color: rgba(255, 255, 255, 0.7);
       border: none;
+      color: black;
       cursor: pointer;
-      margin-bottom: 10px;
     }
   </style>
 </head>
@@ -51,9 +54,9 @@
 
 <!-- Camera selection popup -->
 <div id="cameraSelectContainer">
-  <button id="fullscreenButton">Go Fullscreen</button>
   <h2>Select a Camera</h2>
   <select id="cameraSelect"></select>
+  <button id="fullscreenButton">Go Fullscreen</button>
   <button id="confirmCamera">Confirm</button>
 </div>
 
@@ -90,9 +93,6 @@
         });
 
         currentStream = stream;
-
-        // Save the selected camera ID to localStorage
-        localStorage.setItem('selectedCameraId', deviceId);
       })
       .catch(err => {
         console.error("Error accessing webcam: ", err);
@@ -113,14 +113,14 @@
           cameraSelect.appendChild(option);
         });
 
-        // Get the saved camera ID from localStorage
-        const savedCameraId = localStorage.getItem('selectedCameraId');
+        // Log the devices to the console to help debug camera detection
+        console.log('Available video devices:', videoDevices);
 
-        // Set the selected camera if it exists in the list, otherwise default to the first camera
-        if (savedCameraId && videoDevices.some(device => device.deviceId === savedCameraId)) {
-          cameraSelect.value = savedCameraId;
-        } else if (videoDevices.length > 0) {
+        // Default to the first camera if available
+        if (videoDevices.length > 0) {
           cameraSelect.value = videoDevices[0].deviceId;
+        } else {
+          alert('No video input devices detected. Please check if the external USB camera is connected and allowed.');
         }
       })
       .catch(err => {
@@ -142,28 +142,6 @@
     startWebcam(selectedCameraId); // Start the selected camera on both video elements
     cameraSelectContainer.style.display = 'none'; // Hide the popup after confirmation
   });
-
-  // Start default webcam streams for both videos when the page loads
-  function initializeWebcam() {
-    const savedCameraId = localStorage.getItem('selectedCameraId');
-    if (savedCameraId) {
-      startWebcam(savedCameraId);
-    } else {
-      navigator.mediaDevices.getUserMedia({ video: true })
-        .then(stream => {
-          videoElements.forEach(videoElement => {
-            videoElement.srcObject = stream;
-          });
-          currentStream = stream; // Set current stream
-        })
-        .catch(err => {
-          console.error("Error accessing webcam: ", err);
-        });
-    }
-  }
-
-  // Initialize webcam on page load
-  initializeWebcam();
 
   // Toggle Fullscreen Functionality
   fullscreenButton.addEventListener('click', () => {
@@ -193,6 +171,18 @@
       fullscreenButton.textContent = 'Go Fullscreen';
     }
   });
+
+  // Start default webcam streams for both videos when the page loads
+  navigator.mediaDevices.getUserMedia({ video: true })
+    .then(stream => {
+      videoElements.forEach(videoElement => {
+        videoElement.srcObject = stream;
+      });
+      currentStream = stream; // Set current stream
+    })
+    .catch(err => {
+      console.error("Error accessing webcam: ", err);
+    });
 </script>
 </body>
 </html>
